@@ -21,11 +21,10 @@ def find_qywx_window():
             print("未找到企业微信窗口，请检查是否已打开并处于前台。")
             time.sleep(3)  # 等待3秒后再次尝试
 
-
 def check_group_name(window):
     global last_copied_text
     try:
-        # 定位到企业微信图标
+        # 定位到企业微信界面
         qm_location = pyautogui.locateCenterOnScreen('QM.jpg', confidence=0.8)
         if qm_location:
             # 在定位到的位置右侧100像素处点击，以打开群聊信息面板
@@ -47,7 +46,7 @@ def check_group_name(window):
                 center_x = screen_width // 2
                 center_y = screen_height // 2 - 500
                 # 模拟点击屏幕中心
-                pyautogui.click(center_x, center_y)  # 点击屏幕中心
+                pyautogui.click(center_x, center_y)  # 点击屏幕中心上方500像素
                 time.sleep(2)
                 pyautogui.hotkey('ctrl', 'down')
                 return False
@@ -61,16 +60,16 @@ def check_group_name(window):
                 print("当前不是客户群，跳过。")
                 # 在这里添加点击屏幕中心和按下Ctrl+Down的操作
                 screen_width, screen_height = pyautogui.size()
-                # 计算屏幕中心的坐标
+                # 点击屏幕中心上方500像素
                 center_x = screen_width // 2
                 center_y = screen_height // 2 - 500
                 # 模拟点击屏幕中心
-                pyautogui.click(center_x, center_y)  # 点击屏幕中心
+                pyautogui.click(center_x, center_y)
                 time.sleep(2)
-                pyautogui.hotkey('ctrl', 'down')  # 按下Ctrl+Down
+                pyautogui.hotkey('ctrl', 'down')
                 return False
         else:
-            print("无法找到企业微信图标。")
+            print("无法找到企业微信。")
             return False
     except Exception as e:
         print(f"无法获取群聊名称: {e}")
@@ -95,7 +94,6 @@ def find_and_click_add_member_button(window):
         print(f"无法找到或点击添加成员按钮: {e}")
         return False
 
-
 def input_member_name():
     # 使用图像匹配查找搜索框
     region = (640, 237, 640, 560)  # 这里的坐标和尺寸需根据实际情况调整
@@ -105,10 +103,12 @@ def input_member_name():
         pyautogui.click(search_box_location[0] + 63, search_box_location[1] + 38, clicks=1, button='left')
         time.sleep(2)  # 等待搜索框响应
         # 输入要拉进群的成员名称，使用模拟键盘操作，注意输入法
-        pyautogui.hotkey('z', 'h', 'i', 'n', 'e', 'n', 'g', 'z', 'h', 'u', 's', 'h', 'o', 'u', '1')
+        pyautogui.typewrite('zhinengzhushou1',0.2)
         time.sleep(2)  # 等待搜索结果出现
     else:
         print("未找到搜索框。")
+        qx_location = pyautogui.locateOnScreen('QX.jpg', confidence=0.7, region=region)
+        pyautogui.click(pyautogui.center(qx_location))
 
 def check_member_exists(window, member_name):
     try:
@@ -126,7 +126,9 @@ def check_member_exists(window, member_name):
                 print("取消成功。")
                 return True
             else:
+                time.sleep(1)
                 print("未找到取消按钮。")
+                pyautogui.hotkey('esc')
                 return False
 
         # 如果没有找到第一张图片，则继续定位第二张图片
@@ -144,7 +146,9 @@ def check_member_exists(window, member_name):
                 print("取消成功。")
                 return True
             else:
+                time.sleep(0.5)
                 print("未找到取消按钮。")
+                pyautogui.hotkey('esc')
                 return False
 
         # 如果两张图片都没有找到，则返回False
@@ -174,15 +178,18 @@ def add_member(window, member_name):
                 return True  # 点击成功后直接返回
             else:
                 print("未找到添加按钮。")
+                time.sleep(0.5)
+                pyautogui.hotkey('esc')
                 return False
         else:
             print("未选中智能助手。")
+            time.sleep(1)
+            pyautogui.hotkey('esc')
             return False
 
     except Exception as e:
         print(f"发生错误: {e}")
         return False
-
 
 def main():
     app = find_qywx_window()
@@ -208,12 +215,7 @@ def main():
                 print("智能助手已经在群聊中，无需添加。")
                 # 重置标志变量，以便在下一次循环开始时重新输入成员名称
                 has_inputted_member_name = False
-                # 在这里添加点击屏幕中心和按下Ctrl+Down的操作
-                screen_width, screen_height = pyautogui.size()
-                # 计算屏幕中心的坐标
-                center_x = screen_width // 2
-                center_y = screen_height // 2 - 500
-                # 模拟点击屏幕中心
+                # 按下Ctrl+Down的操作
                 time.sleep(2)
                 pyautogui.hotkey('ctrl', 'down')  # 按下Ctrl+Down
                 continue  # 如果智能助手已经存在，则直接跳回检查客户群
@@ -234,10 +236,9 @@ def main():
 
     # 在这里添加点击屏幕中心和按下Ctrl+Down的操作
     screen_width, screen_height = pyautogui.size()
-    # 计算屏幕中心的坐标
+    # 点击屏幕中心上方500像素
     center_x = screen_width // 2
     center_y = screen_height // 2 - 500
-    # 模拟点击屏幕中心
     time.sleep(2)
     pyautogui.click(center_x, center_y)
     time.sleep(2)
