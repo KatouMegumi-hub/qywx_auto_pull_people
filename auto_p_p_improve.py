@@ -3,9 +3,11 @@ import pyautogui
 from pywinauto import Application, findwindows
 import pyperclip
 import pywinauto
+from openpyxl import Workbook, load_workbook
 import pyttsx3
 from PIL import ImageGrab
 import os
+import pandas as pd
 
 # 全局变量，用于保存上一次复制的内容
 last_copied_text = ""
@@ -72,7 +74,7 @@ def gain_tc_group_name():
 
             # 生成初始文件名
             base_filename = 'tc_group_name'
-            file_extension = '.png'
+            file_extension = '.jpg'
             filename = f'{base_filename}{file_extension}'
 
             # 检查文件是否存在，如果存在则递增数字
@@ -99,8 +101,10 @@ def fetch_and_check_group_name():
         time.sleep(0.5)  # 等待全选完成
         pyautogui.hotkey('ctrl', 'c')  # 复制文本
         time.sleep(0.5)  # 等待复制完成
+
         # 获取剪贴板的内容
         group_name = pyperclip.paste()
+
         # 检查是否与上次复制的内容相同
         if group_name == last_copied_text:
             print("当前群聊名称与上次相同，跳过。")
@@ -119,14 +123,39 @@ def fetch_and_check_group_name():
         # 如果读取到的文本中包含这三个字段，就认为当前群聊是服务群，检测要拉人的群
         keywords = ["服务群", "交流群", "技术支持群", "技术交流"]
         if any(keyword in group_name for keyword in keywords):
+            file_name = 'auto_pull_people.xlsx'
+            if os.path.exists(file_name):
+                wb = load_workbook(file_name)
+                ws = wb.active
+            else:
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Group Names"
+
+                # 初始化表格时添加标签
+                ws.cell(row=1, column=1, value="group_name")
+                ws.cell(row=1, column=2, value="operation")
+
+            # 找到第一列没有数据的行
+            current_column = 1
+            current_row = 2  # 从第二行开始
+            while ws.cell(row=current_row, column=current_column).value is not None:
+                current_row += 1
+            # 插入数据
+            ws.cell(row=current_row, column=current_column, value=group_name)
+            wb.save(file_name)
+            print(f"··················群聊名称 '{group_name}' 已保存到 {file_name}··················")
             return True
         else:
             print("当前不是客户群，跳过。")
+
             # 在这里添加点击屏幕中心和按下Ctrl+Down的操作
             screen_width, screen_height = pyautogui.size()
+
             # 点击屏幕中心上方500像素
             center_x = screen_width // 2
             center_y = screen_height // 2 - 500
+
             # 模拟点击屏幕中心
             pyautogui.click(center_x, center_y)
             time.sleep(2)
@@ -170,6 +199,7 @@ def dw_input_member_name():
             pyautogui.moveTo(center_x, center_y, duration=0.2)
             pyautogui.click(center_x, center_y, clicks=1, button='left')
             time.sleep(2)  # 等待搜索框响应
+
             # 输入要拉进群的成员名称，使用模拟键盘操作，注意输入法
             pyautogui.typewrite('fuwuhaohuanan12', 0.05)
             time.sleep(2)  # 等待搜索结果出现
@@ -183,6 +213,7 @@ def dw_input_member_name():
 def check_member_added():
     try:
         time.sleep(1)
+        #检测是否已添加，如果已添加则执行下面的跳过操作
         ytj_location = pyautogui.locateOnScreen('YTJ1.jpg', confidence=0.98)
         if ytj_location:
             time.sleep(1)
@@ -208,7 +239,7 @@ def check_member_not_add():
             print("选中服务号华南2成功")
             return True
     except Exception as e:
-        print("未能执行添加操作，请检查程序是否出错")
+        print(f"未能执行添加操作，请检查程序是否出错{e}")
         return False
 
 
@@ -222,6 +253,7 @@ def add_member():
             pyautogui.click(center_x, center_y, clicks=1, button='left')
             #要注意点击后要迅速操作选则下一个群聊，否则新消息则会置顶
             pyautogui.hotkey("ctrl", "down")
+
             #检测是否会弹出当前群聊人数过多，要点击邀请按钮
             slgd_location = pyautogui.locateOnScreen('slgd.jpg', confidence=0.8)
             if slgd_location:
@@ -239,14 +271,44 @@ def add_member():
         return False
 
 
+#执行写入操作
+def write_operation_label():
+    try:
+        global last_copied_text
+        # 读取Excel文件
+        file_name = "auto_pull_people.xlsx"
+        df = pd.read_excel(file_name, engine='openpyxl')
+
+        # 检查'group_name'和'operation'列是否存在
+        if 'group_name' not in df.columns or 'operation' not in df.columns:
+            print("错误：'group_name' 或 'operation' 列不存在于文件中")
+            return False
+
+        # 将 operation 列转换为字符串类型
+        df['operation'] = df['operation'].astype(str)
+
+        # 查找对应的 group_name 值并更新 operation 列
+        if last_copied_text in df['group_name'].values:
+            df.loc[df['group_name'] == last_copied_text, 'operation'] = '已操作'
+            print(f"已将 '{last_copied_text}' 的操作状态更新为 '已操作'")
+        else:
+            print(f"未找到群聊: {last_copied_text}")
+        # 保存修改后的Excel文件
+        df.to_excel(file_name, index=False)
+        return True
+    except Exception as e:
+        print(f"未能正常执行写入操作，请检查代码{e}")
+        return False
+
+
 #主程序运行
 def main():
     while True:
-        if find_qywx_window():
-            print("企业微信已经在前端显示")
-        else:
-            print("企业微信未前置，请检查程序")
-            continue
+        while not find_qywx_window():
+            print("··················企业微信未成功打开或未前置，正在重试...··················")
+            # 可以加上延时等待
+            time.sleep(0.5)
+        print("··················企业微信成功打开并前置··················")
         if click_group_name():
             time.sleep(2)
             if check_pop_ups():
@@ -267,6 +329,7 @@ def main():
                 else:
                     check_member_not_add()
                     add_member()
+                    write_operation_label()
                     continue
         else:
             print("无法定位到添加成员按钮")
